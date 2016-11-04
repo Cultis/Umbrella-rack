@@ -1,37 +1,37 @@
 #include <ESP8266WiFi.h>
 
 // Wifi access point
-#define WLAN_SSID   "XXXX"                          
-#define WLAN_PASS   "XXXX"                           
+#define SSID        "XXXX"                                        // Wifi SSID
+#define PASS        "XXXX"                                        // WiFi Password
 
 // Weather Underground setup
-const char server[] = "api.wunderground.com";
-const String myKey = "a914fd0efd3984de";
-const String myFeatures = "conditions";
-const String myCountry = "Finland";      
-const String myCity = "Helsinki";     
+#define DEST_HOST   "api.wunderground"                            // API site host
+#define DEST_IP     "192.254.235.21"                              // API site IP address
 
-String responseString = ""; 
-int APIrain;
-boolean rainFound = false;         
+#define TIMEOUT     5000                                          //ms
 
-void setup()
+int APIrain;                                                   
+
+void setup()  
 {
 
 // Set datarate
-  Serial.begin(115200);
+  Serial.begin(115200);                 
+  Serial.setTimeout(TIMEOUT);             
+  
+  delay(2000);                           
 
 // Define LED pins as an output 
-  pinMode(16, OUTPUT);
+  pinMode(2, OUTPUT);
   pinMode(5, OUTPUT);
   pinMode(4, OUTPUT); 
 
 // Connect to WiFi access point.
   Serial.println(); Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(WLAN_SSID);
+  Serial.println(SSID);
 
-  WiFi.begin(WLAN_SSID, WLAN_PASS);
+  WiFi.begin(SSID, PASS);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -41,66 +41,46 @@ void setup()
   Serial.println("WiFi connected");
   Serial.println("IP address: "); 
   Serial.println(WiFi.localIP());
-
-  String html_cmd1 = "GET /api/" + myKey + "/" + myFeatures + "/q/" + myCountry + "/" + myCity + ".json HTTP/1.1";
-  String html_cmd2 = "Host: " + (String)server;
-  String html_cmd3 = "Connection: close";
-
-  Serial.println("Sending commands:");
-  Serial.println(" " + html_cmd1);
-  Serial.println(" " + html_cmd2);
-  Serial.println(" " + html_cmd3);
-  Serial.println();
-}
-
-//Update values from .JSON
-void checkData()
-{
-  int i;
-  if(responseString.startsWith (F("precip_today_metric")) & !rainFound)
-  {
-    char rain2[5];
-    rainFound = true;
-    for (i=20; i < responseString.length ()-1; ++i)
-    {
-      if(responseString[i] == ',')
-        break;
-      rain2[i-20] = responseString[i];
-    }
-    APIrain = atoi(rain2);
-  }
-  responseString = "";
 }
 
 void loop() 
 {
+  String cmd;                                                    // Command string to the ESP8266
   
-// LED triggers based on API data
-  if (APIrain < 0.3)                                               // LEDs off when rain < 0.3mm
+  // Build HTTP request.
+  cmd = "GET ";
+  cmd += "http://api.wunderground.com/api/<API KEY>/forecast/q/autoip.json";
+  cmd += " HTTP/1.1\r\n\r\n";
+
+  Serial.print(APIrain);
+  
+  // LED triggers based on API data
+  if (APIrain > 10)                                               // LEDs off when rain < 10%
   {
-    digitalWrite(16, LOW);            
+    digitalWrite(2, LOW);            
     digitalWrite(5, LOW); 
     digitalWrite(4, LOW);
   }
-  if (APIrain >= 0.3 && APIrain <= 0.9)                            // 1 LED on when rain >= 0.3mm and <= 0.9mm                          
+  if (APIrain >= 10 && APIrain <= 30)                             // 1 LED on when pop >= 10% and <= 30%                          
   {
-    digitalWrite(16, HIGH);
+    digitalWrite(2, HIGH);
     digitalWrite(5, LOW); 
     digitalWrite(4, LOW);
   }
   
-  if (APIrain > 0.9 && APIrain <= 4.4)                             // 2 LEDs on when rain > 0.9mm and <= 4.4mm
+  if (APIrain > 30 && APIrain <= 60)                              // 2 LEDs on when pop > 30% and <= 60%
   {
-    digitalWrite(16, HIGH);
+    digitalWrite(2, HIGH);
     digitalWrite(5, HIGH);
     digitalWrite(4, LOW); 
   }
     
-  if (APIrain > 4.4)                                               // 3 LEDs on when rain over 4.4mm
+  if (APIrain > 60)                                               // 3 LEDs on when pop > 60%
   {
-    digitalWrite(16, HIGH);            
+    digitalWrite(2, HIGH);            
     digitalWrite(5, HIGH); 
     digitalWrite(4, HIGH);
-  }
-  delay(10*60*1000);                                               // 10 minute delay
+  }                 
+
+  delay(3*60*1000);                                               // 3 minute delay                             
 }
