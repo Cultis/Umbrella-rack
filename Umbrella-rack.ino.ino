@@ -1,6 +1,5 @@
 // Include libraries
 #include <ESP8266WiFi.h>
-#include <ArduinoJson.h>
 
 
 const char* ssid     = "XXXX";  // Wifi name.
@@ -71,16 +70,23 @@ void loop() {
       section="ignore";
       String result = line.substring(1);
 
-      // Parse JSON
-      int size = result.length() + 1;
-      char json[size];
-      //Serial.print(size); // Print size
-      result.toCharArray(json, size);
-      //Serial.print(result); // Print results.
-      StaticJsonBuffer<200> jsonBuffer;
-      JsonObject& json_parsed = jsonBuffer.parseObject(json);;
+      //We're looking for a json value 'pop', and it's value has a length of 2.
+      String key = "\"pop\": \"";
+      int lengthOfValue = 2;
+
+      //Find the key in our result string, and get the index of the value (immediately after our key)
+      int index = result.indexOf(key); //8 chars
+      int indexOfValue = index+key.length();
+
+      //Extract the 3 characters immediately after our 'key', it will contain the digits of our 'pop' value.
+      String value = response.substring(indexOfValue, indexOfValue+lengthOfValue);
+
+      //If we have a 2 digit number, such as '10', then the three characters captured will have a " in it. 
+      //Replace it with a space, to make parseable as an int. 
+      //This also saves memory by preventing allocation of yet another string.
+      value.replace('\"', ' ');
       
-      int pop = json_parsed["pop"]; //Store pop value.
+      int pop = value.toInt(); //Store the pop value;
       
       // Print probability of precipitation value
       Serial.print("Probability of precipitation: ");
